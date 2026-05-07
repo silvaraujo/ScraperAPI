@@ -1,6 +1,16 @@
+![Railway](https://img.shields.io/badge/Railway-Supported-blue?logo=railway)
+![Docker](https://img.shields.io/badge/Docker-Supported-blue?logo=docker)
+![Node.js](https://img.shields.io/badge/Node.js-Supported-green?logo=node.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-Supported-blue?logo=typescript)
+![Express](https://img.shields.io/badge/Express-Supported-yellow?logo=express)
+
 # Playwright with Node.js
 
 Production-oriented API for scraping demo pages with Playwright, Express, TypeScript, and Swagger/OpenAPI documentation.
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/playwright-with-nodejs?referralCode=asepsp&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
+![](./img/docs.png)
 
 ## Features
 
@@ -178,20 +188,20 @@ playwright-with-nodejs/
 
 ## Environment Variables
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `NODE_ENV` | `development` | Runtime environment: `development`, `production`, or `test` |
-| `PORT` | `3000` | HTTP port |
-| `HOST` | `0.0.0.0` | Bind host |
-| `LOG_LEVEL` | `info` | Winston log level |
-| `CORS_ORIGIN` | `*` | Allowed CORS origin, comma-separated for multiple origins |
-| `SCRAPER_BASE_URL` | `https://webscraper.io/test-sites` | Test site source URL |
-| `SCRAPER_ECOMMERCE_URL` | `https://webscraper.io/test-sites/e-commerce/allinone` | E-commerce source URL |
-| `PLAYWRIGHT_HEADLESS` | `true` | Browser headless mode |
-| `PLAYWRIGHT_TIMEOUT_MS` | `30000` | Playwright page/navigation timeout |
-| `SCRAPER_MAX_LIMIT` | `50` | Maximum scrape limit used by configuration |
-| `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window |
-| `RATE_LIMIT_MAX` | `60` | Max requests per rate limit window |
+| Variable                | Default                                                | Description                                                 |
+| ----------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| `NODE_ENV`              | `development`                                          | Runtime environment: `development`, `production`, or `test` |
+| `PORT`                  | `3000`                                                 | HTTP port                                                   |
+| `HOST`                  | `0.0.0.0`                                              | Bind host                                                   |
+| `LOG_LEVEL`             | `info`                                                 | Winston log level                                           |
+| `CORS_ORIGIN`           | `*`                                                    | Allowed CORS origin, comma-separated for multiple origins   |
+| `SCRAPER_BASE_URL`      | `https://webscraper.io/test-sites`                     | Test site source URL                                        |
+| `SCRAPER_ECOMMERCE_URL` | `https://webscraper.io/test-sites/e-commerce/allinone` | E-commerce source URL                                       |
+| `PLAYWRIGHT_HEADLESS`   | `true`                                                 | Browser headless mode                                       |
+| `PLAYWRIGHT_TIMEOUT_MS` | `30000`                                                | Playwright page/navigation timeout                          |
+| `SCRAPER_MAX_LIMIT`     | `50`                                                   | Maximum scrape limit used by configuration                  |
+| `RATE_LIMIT_WINDOW_MS`  | `60000`                                                | Rate limit window                                           |
+| `RATE_LIMIT_MAX`        | `60`                                                   | Max requests per rate limit window                          |
 
 ## Docker
 
