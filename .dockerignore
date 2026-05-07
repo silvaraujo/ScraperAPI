@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+dist
+.git
+.gitignore
+README.md
+.env
+.env.local
+test-results
+playwright-report
+coverage
+.vscode
+.idea
+.DS_Store
+yarn-error.log
+.nyc_output
