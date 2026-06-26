@@ -7,6 +7,7 @@ export interface ApiResponse<T = any> {
     durationMs: number;
     targetUrl?: string;
     timestamp: string;
+    buttonText?: string;
   };
 }
 
