@@ -71,7 +71,7 @@ export class ButtonCheckService {
             id: targetButton.getAttribute('id') || '',
             visible: window.getComputedStyle(targetButton).display !== 'none',
             enabled: !targetButton.hasAttribute('disabled'),
-          } : null,
+          } : undefined,
           inputs,
           buttons: allButtons,
           forms,
