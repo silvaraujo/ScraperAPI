@@ -1,7 +1,7 @@
 import { Page } from 'playwright';
 import logger from '../config/logger';
 import { browserService } from './browser.service';
-import { ButtonCheckResult, PageAnalysis } from '../types/scrape.types';
+import { ButtonCheckResult } from '../types/scrape.types';
 
 export class ButtonCheckService {
   async verifyButtonOnPage(
