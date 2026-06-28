@@ -8,6 +8,7 @@ export interface ApiResponse<T = any> {
     targetUrl?: string;
     timestamp: string;
     buttonText?: string;
+    source?: string;
   };
 }
 

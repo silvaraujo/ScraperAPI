@@ -8,10 +8,11 @@ import { requestLoggerMiddleware } from './middlewares/request-logger.middleware
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { securityMiddleware, corsMiddleware, compressionMiddleware } from './middlewares/security.middleware';
 import healthRoutes from './routes/health.routes';
-import scrapeRoutes from './routes/scrape.routes';
-import testRoutes from './routes/test.routes';
-import buttonCheckRoutes from './routes/button-check.routes';
+// import scrapeRoutes from './routes/scrape.routes';
+// import testRoutes from './routes/test.routes';
+// import buttonCheckRoutes from './routes/button-check.routes';
 import { getHealth } from './controllers/health.controller';
+import confirmActionRoutes from './routes/confirm-automate.route';
 
 export const createApp = () => {
   const app = express();
@@ -46,7 +47,7 @@ export const createApp = () => {
 
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Playwright Scraper API - Swagger UI',
+    customSiteTitle: 'Scraper API (Para confirmação dos pedidos) - Swagger UI',
     swaggerOptions: {
       persistAuthorization: true,
     },
@@ -57,9 +58,10 @@ export const createApp = () => {
 
   // API routes
   app.use('/health', healthRoutes);
-  app.use('/api/scrape', scrapeRoutes);
-  app.use('/api/tests/smoke', testRoutes);
-  app.use('/api/button-check', buttonCheckRoutes);
+  // app.use('/api/scrape', scrapeRoutes);
+  // app.use('/api/tests/smoke', testRoutes);
+  // app.use('/api/button-check', buttonCheckRoutes);
+  app.use('/api/confirmAction', confirmActionRoutes);
 
   // 404 handler
   app.use(notFoundMiddleware);

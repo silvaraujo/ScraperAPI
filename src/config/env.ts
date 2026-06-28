@@ -8,7 +8,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   SCRAPER_BASE_URL: z.string().url().default('https://webscraper.io/test-sites'),
   SCRAPER_ECOMMERCE_URL: z.string().url().default('https://webscraper.io/test-sites/e-commerce/allinone'),
-  PLAYWRIGHT_TIMEOUT_MS: z.coerce.number().default(30000),
+  PLAYWRIGHT_TIMEOUT_MS: z.coerce.number().default(60000),
   SCRAPER_MAX_LIMIT: z.coerce.number().default(50),
   PLAYWRIGHT_HEADLESS: z
     .string()

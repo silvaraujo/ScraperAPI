@@ -12,12 +12,31 @@ export class BrowserService {
     logger.info('Initializing Playwright browser');
     this.browser = await chromium.launch({
       headless: env.PLAYWRIGHT_HEADLESS,
+      args: [
+        '--no-sandbox',                           // Obrigatório no Railway (Linux sem root)
+        '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled', // Remove flag de automação detectável
+        '--disable-dev-shm-usage',                // Evita crash por /dev/shm limitado em containers
+        '--disable-gpu',                          // Railway não tem GPU
+        '--disable-extensions',
+        '--no-first-run',
+        '--no-default-browser-check',
+      ],
     });
 
     this.context = await this.browser.newContext({
+      // User-Agent atualizado (Chrome 131 — Dez/2024)
       userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       viewport: { width: 1280, height: 720 },
+      // Evita que o site detecte ausência de locale/timezone
+      locale: 'pt-BR',
+      timezoneId: 'America/Sao_Paulo',
+    });
+
+    // Oculta navigator.webdriver antes de cada página para evitar detecção de bot
+    await this.context.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
     });
   }
 
