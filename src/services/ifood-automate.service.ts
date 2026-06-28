@@ -67,7 +67,7 @@ export class IfoodConfirmService {
 
       // Aguarda o modal de erro (ActionSheet) OU a tela de sucesso (HandshakeResult__content)
       // Isso evita o timeout de 15 segundos quando o código é inserido corretamente e o modal de erro nunca aparece.
-      await page.waitForSelector('[class*="ActionSheet__container"], .HandshakeResult__content', { timeout: 5000 })
+      await page.waitForSelector('.ActionSheet__container, .HandshakeResult__content', { timeout: 5000 })
         .catch(() => {
           logger.warn('Nenhum indicador de resultado (modal ou tela de sucesso) detectado em 5s — capturando textos da página assim mesmo');
         });
