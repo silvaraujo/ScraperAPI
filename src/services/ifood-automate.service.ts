@@ -2,6 +2,7 @@ import { Page } from 'playwright';
 import logger from '../config/logger';
 import { browserService } from './browser.service';
 import { ConfirmationResult } from '../types/confirmAutomate.types';
+import env from '../config/env';
 
 export class IfoodConfirmService {
   async verifyOrderCode(
@@ -15,100 +16,61 @@ export class IfoodConfirmService {
       page = await browserService.createPage();
 
       logger.info(`Confirmando code no ifood: ${code} no localizador: "${localizer}"`);
-      const pageUrl = 'https://confirmacao-entrega-propria.ifood.com.br/numero-pedido';
+      const pageUrl = env.AUTOMATE_IFOOD_URL;
 
       // domcontentloaded é mais confiável que networkidle em SPAs com polling/websockets
       await page.goto(pageUrl, { waitUntil: 'domcontentloaded' });
 
-      // Aguarda o primeiro input aparecer (mais robusto que confiar apenas no goto)
-      await page.waitForSelector('input[type="tel"]', { timeout: 15000 });
+      // Aguarda até que existam exatamente 8 campos de telefone na tela (evita race conditions)
+      await page.waitForFunction(
+        () => document.querySelectorAll('input[type="tel"]').length === 8,
+        { timeout: 15000 }
+      );
 
       const inputs = page.locator('input[type="tel"]');
       const inputCount = await inputs.count();
-
       logger.info(`Inputs encontrados na tela inicial: ${inputCount}`);
 
-      if (inputCount === 8) {
-        const digitos = localizer.split('');
-
-        for (let i = 0; i < inputCount; i++) {
-          await inputs.nth(i).fill(digitos[i]);
-        }
-
-        logger.info(`Localizador preenchido "${localizer}" na página`);
-
-      } else {
-        // Captura HTML para diagnóstico em produção headless
-        const htmlSnippet = (await page.content()).substring(0, 800);
-        logger.error(`Número de inputs inesperado: ${inputCount}. Esperado: 8. HTML: ${htmlSnippet}`);
-        return {
-          success: false,
-          error: `Número de inputs inesperado: ${inputCount}. Esperado: 8.`,
-        };
+      const digitos = localizer.split('');
+      for (let i = 0; i < inputCount; i++) {
+        await inputs.nth(i).fill(digitos[i]);
       }
+      logger.info(`Localizador preenchido "${localizer}" na página`);
 
-      const botaoContinuar = page.locator('button, [type="submit"]').filter({ hasText: /continuar/i });
-      if (await botaoContinuar.count() > 0) {
-        await botaoContinuar.first().click();
-        logger.info(`Botão "Continuar" clicado na página`);
-      } else {
-        logger.error('Botão "Continuar" não encontrado na tela inicial');
-        return {
-          success: false,
-          error: 'Botão "Continuar" não encontrado na tela inicial',
-        };
-      }
+      // Clica em Continuar com auto-waiting do Playwright
+      const botaoContinuar = page.locator('button, [type="submit"]').filter({ hasText: /continuar/i }).first();
+      await botaoContinuar.click({ timeout: 10000 });
+      logger.info(`Botão "Continuar" clicado na página`);
 
-      // Aguarda a tela mudar: os 8 inputs da primeira tela devem desaparecer
+      // Aguarda a tela mudar: espera que existam exatamente 4 inputs
       await page.waitForFunction(
-        () => document.querySelectorAll('input[type="tel"]').length !== 8,
-        { timeout: 15000 },
-      ).catch(() => {
-        // Se não mudar em 15s, continua e deixa a validação abaixo reportar o erro
-      });
+        () => document.querySelectorAll('input[type="tel"]').length === 4,
+        { timeout: 15000 }
+      );
 
       const inputsAtuais = page.locator('input[type="tel"]');
       const countAtual = await inputsAtuais.count();
-
       logger.info(`Inputs encontrados na tela de código: ${countAtual}`);
 
-      if (countAtual === 4) {
-        logger.info(`📝 Inserindo código de segurança: ${code}\n`);
-        const codeDigits = code.split('');
+      logger.info(`📝 Inserindo código de segurança: ${code}\n`);
+      const codeDigits = code.split('');
 
-        for (let i = 0; i < 4; i++) {
-          await inputsAtuais.nth(i).fill(codeDigits[i]);
-        }
-
-        const botaoFinal = page.locator('button, [type="submit"]').filter({ hasText: /continuar/i });
-        if (await botaoFinal.count() > 0) {
-          await botaoFinal.first().click();
-          logger.info(`Botão "Continuar" clicado após inserir o código de segurança`);
-
-          // Aguarda o modal de resultado aparecer (classe estável no HTML do ActionSheet)
-          await page.waitForSelector('[class*="ActionSheet__container"]', { timeout: 15000 })
-            .catch(() => {
-              logger.warn('Modal de resultado não detectado em 15s — capturando textos da página assim mesmo');
-            });
-
-          logger.info('Modal de resultado detectado — capturando textos');
-        } else {
-          logger.error(`Botão "Continuar" não encontrado após inserir o código de segurança`);
-          return {
-            success: false,
-            error: `Botão "Continuar" não encontrado após inserir o código de segurança`,
-          };
-        }
-
-      } else {
-        // Captura HTML para diagnóstico em produção headless
-        const htmlSnippet = (await page.content()).substring(0, 800);
-        logger.error(`❌ Condição não atendida: ${countAtual} campos encontrados. Esperado: 4. HTML: ${htmlSnippet}`);
-        return {
-          success: false,
-          error: `❌ Condição não atendida: ${countAtual} campos encontrados. Esperado: 4.`,
-        };
+      for (let i = 0; i < 4; i++) {
+        await inputsAtuais.nth(i).fill(codeDigits[i]);
       }
+
+      // Clica em Continuar novamente
+      const botaoFinal = page.locator('button, [type="submit"]').filter({ hasText: /continuar/i }).first();
+      await botaoFinal.click({ timeout: 10000 });
+      logger.info(`Botão "Continuar" clicado após inserir o código de segurança`);
+
+      // Aguarda o modal de resultado aparecer (classe estável no HTML do ActionSheet)
+      await page.waitForSelector('[class*="ActionSheet__container"]', { timeout: 15000 })
+        .catch(() => {
+          logger.warn('Modal de resultado não detectado em 15s — capturando textos da página assim mesmo');
+        });
+
+      logger.info('Modal de resultado detectado — capturando textos');
 
       // Captura os textos visíveis dentro do modal de resultado
       const textosCapturados = await page.evaluate(() => {
@@ -157,12 +119,6 @@ export class IfoodConfirmService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error(`Error analyzing page: ${message}`);
-
-      // Screenshot para diagnóstico visual em falhas no ambiente headless
-      if (page) {
-        await page.screenshot({ path: `/tmp/ifood-error-${Date.now()}.png`, fullPage: true }).catch(() => {});
-        logger.info('Screenshot de diagnóstico salvo em /tmp/');
-      }
 
       return {
         success: false,

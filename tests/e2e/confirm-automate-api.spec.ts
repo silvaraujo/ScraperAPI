@@ -6,7 +6,7 @@ const ENDPOINT = '/api/confirmAction';
 
 const IFOOD_PAYLOAD = {
   source: 'ifood',
-  locator: '42284221', // 8 dígitos — mesmo usado em ifood-confirmer.spec.ts
+  locator: '21647131', // 8 dígitos — mesmo usado em ifood-confirmer.spec.ts
   orderCode: '1234',   // 4 dígitos — mesmo usado em ifood-confirmer.spec.ts
 };
 
