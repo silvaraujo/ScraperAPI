@@ -19,7 +19,7 @@ export class Food99ConfirmService {
       page = await browserService.createPage();
 
       logger.info(`Confirmando code no 99food: ${code} no localizador: "${localizer}"`);
-
+      
       let pageUrl = env.AUTOMATE_99FOOD_URL;
       const isDirectUrl = orderId && shopId;
 
@@ -35,7 +35,7 @@ export class Food99ConfirmService {
         // Aguarda até que existam exatamente 8 campos na tela (evita race conditions)
         await page.waitForFunction(
           () => document.querySelectorAll('input[type="text"]').length === 8,
-          { timeout: 5000 }
+          { timeout: 15000 }
         );
 
         const inputs = page.locator('input[type="text"]');
@@ -57,7 +57,7 @@ export class Food99ConfirmService {
       // Aguarda a tela mudar: espera que existam exatamente 4 inputs
       await page.waitForFunction(
         () => document.querySelectorAll('input[type="text"]').length === 4,
-        { timeout: 5000 }
+        { timeout: 15000 }
       );
 
       const inputsAtuais = page.locator('input[type="text"]');
@@ -76,16 +76,15 @@ export class Food99ConfirmService {
       await botaoFinal.click({ timeout: 10000 });
       logger.info(`Botão "Concluir a entrega" clicado após inserir o código de segurança`);
 
-      // Aguarda o modal de resultado aparecer (classe estável no HTML do ActionSheet)
-      await page.waitForSelector('[class*="ActionSheet__container"]', { timeout: 2 })
+      await page.waitForSelector('[class*="error"], [class*="success"]', { timeout: 5000 })
         .catch(() => {
-          logger.warn('Modal de resultado não detectado em 2s — capturando textos da página assim mesmo');
+          logger.warn('Nenhum indicador de resultado detectado em 5s — capturando textos da página assim mesmo');
         });
 
-      logger.info('Modal de resultado detectado — capturando textos');
+      logger.info('Resultado (sucesso ou erro) detectado — capturando textos');
 
-      // Captura os textos visíveis dentro do modal de resultado usando o helper utilitário
-      const textosCapturados = await scrapeVisibleTexts(page, '[class*="page-container"]');
+      // Captura os textos visíveis dentro do modal de resultado ou do container de sucesso usando o helper utilitário
+      const textosCapturados = await scrapeVisibleTexts(page, '[class*="error"], [class*="success"]');
 
       logger.info(`Textos capturados na tela final: ${textosCapturados.length}`);
 

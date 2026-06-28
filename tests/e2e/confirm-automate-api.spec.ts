@@ -1,124 +1,226 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, APIResponse } from '@playwright/test';
 
-// ─── Constantes de teste ────────────────────────────────────────────────────
-// Usar os mesmos valores que já foram validados nos testes de browser.
+// ─── Constantes ─────────────────────────────────────────────────────────────
 const ENDPOINT = '/api/confirmAction';
 
-const IFOOD_PAYLOAD = {
-  source: 'ifood',
-  locator: '21647131', // 8 dígitos — mesmo usado em ifood-confirmer.spec.ts
-  orderCode: '1234',   // 4 dígitos — mesmo usado em ifood-confirmer.spec.ts
-};
+const VALID_PAYLOADS = {
+  ifood: {
+    source: 'ifood',
+    locator: '21647131',
+    orderCode: '1234',
+  },
+  '99food': {
+    source: '99food',
+    locator: '86662935',
+    orderCode: '1234',
+  },
+} as const;
 
-const FOOD99_PAYLOAD = {
-  source: '99food',
-  locator: '86662935', // 8 dígitos — mesmo usado em 99-confirmer.spec.ts
-  orderCode: '1234',   // 4 dígitos — mesmo usado em 99-confirmer.spec.ts
-};
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-// ─── Testes iFood ────────────────────────────────────────────────────────────
-test.describe('API - Confirm Automate: iFood', () => {
-  test.setTimeout(120_000); // Operações Playwright no service podem demorar
+/** POST para o endpoint e devolve { response, body } já parseados. */
+async function postConfirm(
+  request: InstanceType<typeof import('@playwright/test').APIRequestContext>,
+  data: Record<string, unknown>,
+) {
+  const response: APIResponse = await request.post(ENDPOINT, { data });
+  const body = await response.json();
+  return { response, body };
+}
 
-  test('deve retornar sucesso ao confirmar pedido iFood válido', async ({ request }) => {
-    const response = await request.post(ENDPOINT, { data: IFOOD_PAYLOAD });
+/** Verifica as propriedades comuns de uma resposta de sucesso. */
+function assertSuccessResponse(
+  body: Record<string, unknown>,
+  expectedSource: string,
+) {
+  expect(body).toHaveProperty('success', true);
+  expect(body).toHaveProperty('data');
+  expect(body).toHaveProperty('meta');
 
-    expect(response.status()).toBe(200);
+  const meta = body.meta as Record<string, unknown>;
+  expect(meta).toHaveProperty('source', expectedSource);
+  expect(meta).toHaveProperty('durationMs');
+  expect(typeof meta.durationMs).toBe('number');
+  expect(meta).toHaveProperty('timestamp');
+}
 
-    const body = await response.json();
-    expect(body).toHaveProperty('success', true);
-    expect(body).toHaveProperty('meta');
-    expect(body.meta).toHaveProperty('source', 'ifood');
-    expect(body.meta).toHaveProperty('durationMs');
-    expect(typeof body.meta.durationMs).toBe('number');
-  });
-});
+/** Verifica as propriedades comuns de uma resposta de erro 400. */
+function assertValidationError(body: Record<string, unknown>) {
+  expect(body).toHaveProperty('success', false);
+  expect(body).toHaveProperty('error');
+  expect(typeof body.error).toBe('string');
+  expect((body.error as string).length).toBeGreaterThan(0);
+  expect(body).toHaveProperty('meta');
+}
 
-// ─── Testes 99food ───────────────────────────────────────────────────────────
-test.describe('API - Confirm Automate: 99food', () => {
+// ─── Testes de integração: fluxo de sucesso ─────────────────────────────────
+test.describe('POST /api/confirmAction — Fluxo de sucesso', () => {
   test.setTimeout(120_000);
 
-  test('deve retornar sucesso ao confirmar pedido 99food válido', async ({ request }) => {
-    const response = await request.post(ENDPOINT, { data: FOOD99_PAYLOAD });
+  test('iFood: deve confirmar pedido válido e retornar 200', async ({ request }) => {
+    const { response, body } = await postConfirm(request, VALID_PAYLOADS.ifood);
 
     expect(response.status()).toBe(200);
+    assertSuccessResponse(body, 'ifood');
+  });
 
-    const body = await response.json();
-    expect(body).toHaveProperty('success', true);
-    expect(body).toHaveProperty('meta');
-    expect(body.meta).toHaveProperty('source', '99food');
-    expect(body.meta).toHaveProperty('durationMs');
-    expect(typeof body.meta.durationMs).toBe('number');
+  test('99food: deve confirmar pedido válido e retornar 200', async ({ request }) => {
+    const { response, body } = await postConfirm(request, VALID_PAYLOADS['99food']);
+
+    expect(response.status()).toBe(200);
+    assertSuccessResponse(body, '99food');
   });
 });
 
-// ─── Validação de Schema (Zod) ───────────────────────────────────────────────
-test.describe('API - Confirm Automate: Validação de entrada', () => {
-  test('deve retornar 400 quando "source" está ausente', async ({ request }) => {
-    const response = await request.post(ENDPOINT, {
-      data: { locator: '26893427', orderCode: '1234' },
+// ─── Testes de validação de schema (Zod) ────────────────────────────────────
+test.describe('POST /api/confirmAction — Validação de entrada', () => {
+
+  // ── source ────────────────────────────────────────────────────────────────
+
+  test.describe('campo "source"', () => {
+    test('deve rejeitar quando ausente', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        locator: '26893427',
+        orderCode: '1234',
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
     });
 
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body).toHaveProperty('success', false);
-  });
+    test('deve rejeitar valor não permitido ("uber")', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        source: 'uber',
+        locator: '26893427',
+        orderCode: '1234',
+      });
 
-  test('deve retornar 400 quando "source" é um valor não permitido', async ({ request }) => {
-    const response = await request.post(ENDPOINT, {
-      data: { source: 'uber', locator: '26893427', orderCode: '1234' },
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
     });
 
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body).toHaveProperty('success', false);
+    test('deve rejeitar valor vazio', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        source: '',
+        locator: '26893427',
+        orderCode: '1234',
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
+    });
   });
 
-  test('deve retornar 400 quando "locator" tem menos de 8 dígitos', async ({ request }) => {
-    const response = await request.post(ENDPOINT, {
-      data: { source: 'ifood', locator: '1234', orderCode: '1234' },
+  // ── locator ───────────────────────────────────────────────────────────────
+
+  test.describe('campo "locator"', () => {
+    const validBase = { source: 'ifood', orderCode: '1234' };
+
+    test('deve rejeitar quando ausente', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        source: 'ifood',
+        orderCode: '1234',
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
     });
 
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body).toHaveProperty('success', false);
-  });
+    test('deve rejeitar com menos de 8 dígitos', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        ...validBase,
+        locator: '1234',
+      });
 
-  test('deve retornar 400 quando "locator" tem mais de 8 dígitos', async ({ request }) => {
-    const response = await request.post(ENDPOINT, {
-      data: { source: 'ifood', locator: '123456789', orderCode: '1234' },
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
     });
 
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body).toHaveProperty('success', false);
-  });
+    test('deve rejeitar com mais de 8 dígitos', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        ...validBase,
+        locator: '123456789',
+      });
 
-  test('deve retornar 400 quando "orderCode" tem menos de 4 dígitos', async ({ request }) => {
-    const response = await request.post(ENDPOINT, {
-      data: { source: 'ifood', locator: '26893427', orderCode: '12' },
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
     });
 
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body).toHaveProperty('success', false);
+    test('deve rejeitar com caracteres não numéricos', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        ...validBase,
+        locator: 'abcd1234',
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
+    });
   });
 
-  test('deve retornar 400 quando "orderCode" tem mais de 4 dígitos', async ({ request }) => {
-    const response = await request.post(ENDPOINT, {
-      data: { source: 'ifood', locator: '26893427', orderCode: '12345' },
+  // ── orderCode ─────────────────────────────────────────────────────────────
+
+  test.describe('campo "orderCode"', () => {
+    const validBase = { source: 'ifood', locator: '26893427' };
+
+    test('deve rejeitar quando ausente', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        source: 'ifood',
+        locator: '26893427',
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
     });
 
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body).toHaveProperty('success', false);
+    test('deve rejeitar com menos de 4 dígitos', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        ...validBase,
+        orderCode: '12',
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
+    });
+
+    test('deve rejeitar com mais de 4 dígitos', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        ...validBase,
+        orderCode: '12345',
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
+    });
+
+    test('deve rejeitar com caracteres não numéricos', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        ...validBase,
+        orderCode: 'abcd',
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
+    });
   });
 
-  test('deve retornar 400 quando o body está vazio', async ({ request }) => {
-    const response = await request.post(ENDPOINT, { data: {} });
+  // ── body vazio / inválido ─────────────────────────────────────────────────
 
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body).toHaveProperty('success', false);
+  test.describe('body inválido', () => {
+    test('deve rejeitar body vazio ({})', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {});
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
+    });
+
+    test('deve rejeitar body com campos extras mas sem os obrigatórios', async ({ request }) => {
+      const { response, body } = await postConfirm(request, {
+        foo: 'bar',
+        baz: 123,
+      });
+
+      expect(response.status()).toBe(400);
+      assertValidationError(body);
+    });
   });
 });
