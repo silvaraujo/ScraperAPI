@@ -75,7 +75,7 @@ export class IfoodConfirmService {
       logger.info('Resultado (sucesso ou erro) detectado — capturando textos');
 
       // Captura os textos visíveis dentro do modal de resultado ou do container de sucesso usando o helper utilitário
-      const textosCapturados = await scrapeVisibleTexts(page, '[class*="ActionSheet__container"], .HandshakeResult__content');
+      const textosCapturados = await scrapeVisibleTexts(page, '.ActionSheet__container, .HandshakeResult__content');
 
       logger.info(`Textos capturados na tela final: ${textosCapturados.length}`);
 
