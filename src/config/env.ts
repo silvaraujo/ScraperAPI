@@ -8,6 +8,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   SCRAPER_BASE_URL: z.string().url().default('https://webscraper.io/test-sites'),
   SCRAPER_ECOMMERCE_URL: z.string().url().default('https://webscraper.io/test-sites/e-commerce/allinone'),
+  AUTOMATE_99FOOD_URL: z.string().url().default('https://food-b-h5.99app.com/pt-BR/v2/confirmation-entrega/locator'),
+  AUTOMATE_IFOOD_URL: z.string().url().default('https://confirmacao-entrega-propria.ifood.com.br/numero-pedido'),
   PLAYWRIGHT_TIMEOUT_MS: z.coerce.number().default(60000),
   SCRAPER_MAX_LIMIT: z.coerce.number().default(50),
   PLAYWRIGHT_HEADLESS: z

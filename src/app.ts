@@ -61,7 +61,7 @@ export const createApp = () => {
   // app.use('/api/scrape', scrapeRoutes);
   // app.use('/api/tests/smoke', testRoutes);
   // app.use('/api/button-check', buttonCheckRoutes);
-  app.use('/api/confirmAction', confirmActionRoutes);
+  app.use('/api/automations', confirmActionRoutes);
 
   // 404 handler
   app.use(notFoundMiddleware);

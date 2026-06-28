@@ -3,43 +3,40 @@ import { asyncHandler } from '../utils/async-handler';
 import { buildResponse } from '../utils/response';
 import { food99ConfirmService } from '../services/99food-automate.service';
 import { ifoodConfirmService } from '../services/ifood-automate.service';
-import { ConfirmAutomateSchema } from '../schemas/confirmAutomate.schema';
+
 import { BadRequestError } from '../utils/http-error';
 import { ConfirmationResult } from '../types/confirmAutomate.types';
+import env from '../config/env';
 
 export const postConfirmAutomate = asyncHandler(async (req: Request, res: Response) => {
-  const parsed = ConfirmAutomateSchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    throw new BadRequestError(JSON.stringify(parsed.error.errors));
-  }
-
-  const { source, locator, orderCode } = parsed.data;
+  const { source, locator, orderCode } = req.body;
   const startTime = Date.now();
 
-  let result: ConfirmationResult;
+  const integrations: Record<string, { service: any; url: string }> = {
+    '99food': {
+      service: food99ConfirmService,
+      url: env.AUTOMATE_99FOOD_URL
+    },
+    'ifood': {
+      service: ifoodConfirmService,
+      url: env.AUTOMATE_IFOOD_URL
+    }
+  };
 
-  switch (source) {
-    case '99food': {
-      const result99 = await food99ConfirmService.verifyOrderCode(locator, orderCode);
-      result = result99;
-      break;
-    }
-    case 'ifood': {
-      const resultIf = await ifoodConfirmService.verifyOrderCode(locator, orderCode);
-      result = resultIf;
-      break;
-    }
-    default:
-      throw new BadRequestError('Fonte inválida');
+  const integration = integrations[source as string];
+  if (!integration) {
+    throw new BadRequestError('Fonte de automação inválida');
   }
 
+  const result: ConfirmationResult = await integration.service.verifyOrderCode(locator, orderCode);
+
   if (!result.success) {
-    return buildResponse.error(res, result.error || 'Erro ao analisar página', 500);
+    return buildResponse.error(res, result.error || 'Não foi possível validar o pedido', 422);
   }
 
   return buildResponse.success(res, result, 200, {
     durationMs: Date.now() - startTime,
-    source: source,
+    source,
+    targetUrl: integration.url,
   });
 });

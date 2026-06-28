@@ -1,42 +1,32 @@
 import { Router } from 'express';
 import { postConfirmAutomate } from '../controllers/confirm-automate.controller';
+import { validateSchema } from '../middlewares/validate.middleware';
+import { ConfirmAutomateSchema } from '../schemas/confirmAutomate.schema';
 
 const router = Router();
 
 /**
  * @swagger
- * /api/confirmAction:
+ * /api/automations/confirmations:
  *   post:
  *     summary: Executa o confirm-automate
+ *     tags: [Automações]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - source
- *               - locator
- *               - orderCode
- *             properties:
- *               source:
- *                 type: string
- *                 enum: ["99food", "ifood"]
- *                 example: "ifood"
- *               locator:
- *                 type: string
- *                 minLength: 8
- *                 maxLength: 8
- *                 example: "26893427"
- *               orderCode:
- *                 type: string
- *                 minLength: 4
- *                 maxLength: 4
- *                 example: "1234"
+ *             $ref: '#/components/schemas/ConfirmAutomateRequest'
  *     responses:
  *       200:
- *         description: Sucesso
+ *         description: "Sucesso. Retorna os dados da validação."
+ *       400:
+ *         description: "Erro de validação nos dados de entrada."
+ *       422:
+ *         description: "Erro de regra de negócio (ex: pedido não encontrado)."
+ *       500:
+ *         description: "Erro interno no servidor durante a automação."
  */
-router.post('/executar', postConfirmAutomate);
+router.post('/confirmations', validateSchema(ConfirmAutomateSchema), postConfirmAutomate);
 
 export default router;

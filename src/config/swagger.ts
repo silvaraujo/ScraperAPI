@@ -50,46 +50,69 @@ const options = {
             timestamp: { type: 'string', format: 'date-time' },
           },
         },
-        // ScrapeSite: {
-        //   type: 'object',
-        //   properties: {
-        //     title: { type: 'string' },
-        //     description: { type: 'string' },
-        //     url: { type: 'string', format: 'uri' },
-        //   },
-        //   required: ['title', 'url'],
-        // },
-        // Product: {
-        //   type: 'object',
-        //   properties: {
-        //     title: { type: 'string' },
-        //     price: { type: 'string' },
-        //     description: { type: 'string' },
-        //     rating: { type: 'string' },
-        //     url: { type: 'string', format: 'uri' },
-        //   },
-        // },
-        // SmokeTestCheck: {
-        //   type: 'object',
-        //   properties: {
-        //     name: { type: 'string' },
-        //     passed: { type: 'boolean' },
-        //     error: { type: 'string' },
-        //   },
-        // },
-        // SmokeTestResult: {
-        //   type: 'object',
-        //   properties: {
-        //     target: { type: 'string', enum: ['test-sites', 'ecommerce'] },
-        //     passed: { type: 'boolean' },
-        //     checks: {
-        //       type: 'array',
-        //       items: { $ref: '#/components/schemas/SmokeTestCheck' },
-        //     },
-        //     durationMs: { type: 'integer' },
-        //     timestamp: { type: 'string', format: 'date-time' },
-        //   },
-        // },
+        ScrapeSite: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            url: { type: 'string', format: 'uri' },
+          },
+          required: ['title', 'url'],
+        },
+        Product: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            price: { type: 'string' },
+            description: { type: 'string' },
+            rating: { type: 'string' },
+            url: { type: 'string', format: 'uri' },
+          },
+        },
+        SmokeTestCheck: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            passed: { type: 'boolean' },
+            error: { type: 'string' },
+          },
+        },
+        SmokeTestResult: {
+          type: 'object',
+          properties: {
+            target: { type: 'string', enum: ['test-sites', 'ecommerce'] },
+            passed: { type: 'boolean' },
+            checks: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/SmokeTestCheck' },
+            },
+            durationMs: { type: 'integer' },
+            timestamp: { type: 'string', format: 'date-time' },
+          },
+        },
+        ConfirmAutomateRequest: {
+          type: 'object',
+          required: ['source', 'locator', 'orderCode'],
+          properties: {
+            source: {
+              type: 'string',
+              enum: ['99food', 'ifood'],
+              example: 'ifood',
+            },
+            locator: {
+              type: 'string',
+              minLength: 8,
+              maxLength: 8,
+              example: '26893427',
+            },
+            orderCode: {
+              type: 'string',
+              minLength: 4,
+              maxLength: 4,
+              example: '1234',
+            },
+          },
+        },
       },
     },
   },
