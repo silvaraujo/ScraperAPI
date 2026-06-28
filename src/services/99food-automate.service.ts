@@ -9,6 +9,8 @@ export class Food99ConfirmService {
   async verifyOrderCode(
     localizer: string,
     code: string,
+    orderId?: string,
+    shopId?: string,
   ): Promise<ConfirmationResult> {
     let page: Page | null = null;
 
@@ -17,36 +19,45 @@ export class Food99ConfirmService {
       page = await browserService.createPage();
 
       logger.info(`Confirmando code no 99food: ${code} no localizador: "${localizer}"`);
-      const pageUrl = env.AUTOMATE_99FOOD_URL;
+
+      let pageUrl = env.AUTOMATE_99FOOD_URL;
+      const isDirectUrl = orderId && shopId;
+
+      if (isDirectUrl) {
+        pageUrl = `${pageUrl}?orderId=${orderId}&locator=${localizer}&shopId=${shopId}`;
+        logger.info(`Usando URL direta com parâmetros`);
+      }
 
       // domcontentloaded é mais confiável que networkidle em SPAs com polling/websockets
       await page.goto(pageUrl, { waitUntil: 'domcontentloaded' });
 
-      // Aguarda até que existam exatamente 8 campos na tela (evita race conditions)
-      await page.waitForFunction(
-        () => document.querySelectorAll('input[type="text"]').length === 8,
-        { timeout: 15000 }
-      );
+      if (!isDirectUrl) {
+        // Aguarda até que existam exatamente 8 campos na tela (evita race conditions)
+        await page.waitForFunction(
+          () => document.querySelectorAll('input[type="text"]').length === 8,
+          { timeout: 5000 }
+        );
 
-      const inputs = page.locator('input[type="text"]');
-      const inputCount = await inputs.count();
-      logger.info(`Inputs encontrados na tela inicial: ${inputCount}`);
+        const inputs = page.locator('input[type="text"]');
+        const inputCount = await inputs.count();
+        logger.info(`Inputs encontrados na tela inicial: ${inputCount}`);
 
-      const digitos = localizer.split('');
-      for (let i = 0; i < inputCount; i++) {
-        await inputs.nth(i).fill(digitos[i]);
+        const digitos = localizer.split('');
+        for (let i = 0; i < inputCount; i++) {
+          await inputs.nth(i).fill(digitos[i]);
+        }
+        logger.info(`Localizador preenchido "${localizer}" na página`);
+
+        // Clica em Continuar com auto-waiting do Playwright
+        const botaoContinuar = page.locator('button, [type="button"]').filter({ hasText: /Verificar e continuar/i }).first();
+        await botaoContinuar.click({ timeout: 10000 });
+        logger.info(`Botão "Verificar e continuar" clicado na página`);
       }
-      logger.info(`Localizador preenchido "${localizer}" na página`);
-
-      // Clica em Continuar com auto-waiting do Playwright
-      const botaoContinuar = page.locator('button, [type="button"]').filter({ hasText: /Verificar e continuar/i }).first();
-      await botaoContinuar.click({ timeout: 10000 });
-      logger.info(`Botão "Verificar e continuar" clicado na página`);
 
       // Aguarda a tela mudar: espera que existam exatamente 4 inputs
       await page.waitForFunction(
         () => document.querySelectorAll('input[type="text"]').length === 4,
-        { timeout: 15000 }
+        { timeout: 5000 }
       );
 
       const inputsAtuais = page.locator('input[type="text"]');

@@ -9,7 +9,7 @@ import { ConfirmationResult } from '../types/confirmAutomate.types';
 import env from '../config/env';
 
 export const postConfirmAutomate = asyncHandler(async (req: Request, res: Response) => {
-  const { source, locator, orderCode } = req.body;
+  const { source, locator, orderCode, orderId, shopId } = req.body;
   const startTime = Date.now();
 
   const integrations: Record<string, { service: any; url: string }> = {
@@ -28,7 +28,7 @@ export const postConfirmAutomate = asyncHandler(async (req: Request, res: Respon
     throw new BadRequestError('Fonte de automação inválida');
   }
 
-  const result: ConfirmationResult = await integration.service.verifyOrderCode(locator, orderCode);
+  const result: ConfirmationResult = await integration.service.verifyOrderCode(locator, orderCode, orderId, shopId);
 
   if (!result.success) {
     return buildResponse.error(res, result.error || 'Não foi possível validar o pedido', 422);

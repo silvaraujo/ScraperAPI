@@ -10,6 +10,8 @@ export const ConfirmAutomateSchema = z.object({
     .trim()
     .length(4, 'O orderCode deve ter exatamente 4 caracteres')
     .regex(/^\d+$/, 'O orderCode deve conter apenas números'),
+  orderId: z.string().trim().optional(),
+  shopId: z.string().trim().optional(),
 });
 
 export type ConfirmAutomateSchemaType = z.infer<typeof ConfirmAutomateSchema>;
