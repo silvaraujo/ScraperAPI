@@ -419,8 +419,15 @@ test.describe('99food — Fluxo E2E headed (diagnóstico)', () => {
       }
 
       const textosCapturados = await page.evaluate((selector) => {
-        const raiz = selector ? (document.querySelector(selector) ?? document) : document;
-        return Array.from(raiz.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,strong,b,em,i'))
+        let raizes: (Document | Element)[] = selector ? Array.from(document.querySelectorAll(selector)) : [document];
+        if (raizes.length === 0) raizes = [document];
+
+        const elementosFilhos: Element[] = [];
+        raizes.forEach(raiz => {
+          elementosFilhos.push(...Array.from(raiz.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,strong,b,em,i')));
+        });
+
+        return elementosFilhos
           .filter(el => {
             const texto = el.textContent?.trim();
             const htmlEl = el as HTMLElement;

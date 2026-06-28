@@ -15,10 +15,20 @@ export interface ExtractedText {
  */
 export async function scrapeVisibleTexts(page: Page, containerSelector?: string): Promise<ExtractedText[]> {
   return page.evaluate((selector) => {
-    // Foca no container específico (ex: modal) ou fallback para a página inteira
-    const raiz = selector ? (document.querySelector(selector) ?? document) : document;
+    // Foca em todos os containers que correspondem ao seletor (útil se houver múltiplos modais na DOM)
+    let raizes: (Document | Element)[] = selector ? Array.from(document.querySelectorAll(selector)) : [document];
+    
+    // Se o seletor foi passado mas nenhum elemento foi encontrado, usa o document inteiro como fallback
+    if (raizes.length === 0) {
+      raizes = [document];
+    }
 
-    const elementos = Array.from(raiz.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,strong,b,em,i')).filter(el => {
+    const elementosFilhos: Element[] = [];
+    raizes.forEach(raiz => {
+      elementosFilhos.push(...Array.from(raiz.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,strong,b,em,i')));
+    });
+
+    const elementos = elementosFilhos.filter(el => {
       const texto = el.textContent?.trim();
       const htmlEl = el as HTMLElement;
       const style = window.getComputedStyle(el);

@@ -43,12 +43,41 @@ export class IfoodConfirmService {
       await botaoContinuar.click({ timeout: 10000 });
       logger.info(`Botão "Continuar" clicado na página`);
 
-      // Aguarda a tela mudar: espera que existam exatamente 4 inputs
-      await page.waitForFunction(
-        () => document.querySelectorAll('input[type="tel"]').length === 4,
-        { timeout: 15000 }
-      );
+      // Usa Promise.race para detectar qual outcome ocorreu primeiro.
+      // Os data-testid são estáveis e não dependem de classes geradas dinamicamente.
+      type Outcome = 'passo2' | 'sucesso' | 'erro-codigo' | 'cancelado' | 'timeout';
 
+      const SELETORES: Record<Exclude<Outcome, 'passo2' | 'timeout'>, string> = {
+        'sucesso':     '.HandshakeResult__content',
+        'erro-codigo': '[data-testid="wrong-handshake-modal"]',
+        'cancelado':   '[data-testid="cancelled-order-modal"]',
+      };
+
+      // ── Passo 1 → transição ──────────────────────────────────────────────────
+      // Race entre "4 inputs aparecem" (fluxo normal) e modais de erro precoce.
+      // Se o pedido estiver cancelado, o modal aparece aqui — antes do passo 2.
+      const transicaoPasso1 = await Promise.race([
+        page.waitForFunction(
+          () => document.querySelectorAll('input[type="tel"]').length === 4,
+          { timeout: 15000 }
+        ).then(() => 'passo2' as Outcome),
+        ...( Object.entries(SELETORES) as [Outcome, string][] ).map(([nome, seletor]) =>
+          page!.waitForSelector(seletor, { state: 'visible', timeout: 15000 })
+            .then(() => nome)
+        ),
+      ]);
+
+      logger.info(`Transição após passo 1: "${transicaoPasso1}"`);
+
+      // Se um modal de resultado já apareceu no passo 1, captura e retorna agora.
+      if (transicaoPasso1 !== 'passo2') {
+        const seletorEarly = SELETORES[transicaoPasso1 as Exclude<Outcome, 'passo2' | 'timeout'>];
+        const textosCapturados = await scrapeVisibleTexts(page, seletorEarly);
+        logger.info(`Resultado detectado no passo 1 ("${transicaoPasso1}") — textos: ${textosCapturados.length}`);
+        return { success: true, textosCapturados };
+      }
+
+      // ── Passo 2: inserção do código de segurança ─────────────────────────────
       const inputsAtuais = page.locator('input[type="tel"]');
       const countAtual = await inputsAtuais.count();
       logger.info(`Inputs encontrados na tela de código: ${countAtual}`);
@@ -65,17 +94,28 @@ export class IfoodConfirmService {
       await botaoFinal.click({ timeout: 10000 });
       logger.info(`Botão "Continuar" clicado após inserir o código de segurança`);
 
-      // Aguarda o modal de erro (ActionSheet) OU a tela de sucesso (HandshakeResult__content)
-      // Isso evita o timeout de 15 segundos quando o código é inserido corretamente e o modal de erro nunca aparece.
-      await page.waitForSelector('.ActionSheet__container, .HandshakeResult__content', { timeout: 5000 })
-        .catch(() => {
-          logger.warn('Nenhum indicador de resultado (modal ou tela de sucesso) detectado em 5s — capturando textos da página assim mesmo');
-        });
+      // Usa Promise.race para detectar qual outcome ocorreu primeiro.
+      // Os data-testid são estáveis e não dependem de classes geradas dinamicamente.
+      // (reutiliza o objeto SELETORES já declarado no início da função)
 
-      logger.info('Resultado (sucesso ou erro) detectado — capturando textos');
+      let outcome: Outcome = 'timeout';
+      let seletorDetectado: string | undefined = undefined;
 
-      // Captura os textos visíveis dentro do modal de resultado ou do container de sucesso usando o helper utilitário
-      const textosCapturados = await scrapeVisibleTexts(page, '.ActionSheet__container, .HandshakeResult__content');
+      try {
+        outcome = await Promise.race(
+          (Object.entries(SELETORES) as [Outcome, string][]).map(([nome, seletor]) =>
+            page!.waitForSelector(seletor, { state: 'visible', timeout: 10000 })
+              .then(() => nome)
+          )
+        );
+        seletorDetectado = SELETORES[outcome as Exclude<Outcome, 'passo2' | 'timeout'>];
+        logger.info(`Outcome detectado: "${outcome}" via seletor "${seletorDetectado}"`);
+      } catch {
+        logger.warn('Nenhum indicador de resultado detectado em 10s — capturando textos da página inteira como fallback');
+      }
+
+      // Captura os textos do container detectado (ou da página inteira como fallback)
+      const textosCapturados = await scrapeVisibleTexts(page, seletorDetectado);
 
       logger.info(`Textos capturados na tela final: ${textosCapturados.length}`);
 
